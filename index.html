@@ -1,0 +1,74 @@
+<!doctype html>
+<html ng-app>
+<head>
+    <title>PMA Search</title>
+    <script src="angular.min.js"></script>
+    <script>
+        function UrlCtrl($scope) {
+            $scope.urls = [];
+
+            $scope.$watch('urls', function (newValue, oldValue) {
+                if (newValue !== oldValue) {
+                    persistUrls();
+                }
+            }, true);
+
+            $scope.getTotalUrls = function () {
+                return $scope.urls.length;
+            };
+
+            $scope.addUrl = function () {
+                $scope.urls.push($scope.new_pma_url);
+                $scope.new_pma_url = '';
+            };
+
+            $scope.clear = function () {
+                $scope.urls = [];
+            };
+
+            $scope.removeUrl = function (url) {
+                index = $scope.urls.indexOf(url);
+                if (index >= 0) {
+                    $scope.urls.splice(index, 1);
+                }
+            };
+
+            function persistUrls() {
+                localStorage.setItem('urls', JSON.stringify($scope.urls));
+            }
+
+            function init() {
+                var restored_urls = localStorage.getItem('urls');
+                if (restored_urls) {
+                    $scope.urls = JSON.parse(restored_urls);
+                }
+            }
+
+            init();
+        }
+    </script>
+</head>
+<body>
+<h1>PMA Search</h1>
+<section>
+    <h2>PMA Instances</h2>
+
+    <p>Add PMA instances</p>
+
+    <div ng-controller="UrlCtrl">
+        <form>
+            <input type="text" ng-model="new_pma_url" ng-model-instant>
+            <button ng-click="addUrl()">Add</button>
+        </form>
+        Total Urls: {{getTotalUrls()}}
+        <ul>
+            <li ng-repeat="url in urls">
+                {{url}}
+                <button ng-click="removeUrl(url)">Remove</button>
+            </li>
+        </ul>
+        <button ng-click="clear()">Clear Urls</button>
+    </div>
+</section>
+</body>
+</html>
