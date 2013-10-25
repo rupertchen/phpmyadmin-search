@@ -3,6 +3,7 @@
 <head>
     <title>PMA Search</title>
     <script src="angular.min.js"></script>
+    <script src="underscore-min.js"></script>
     <script>
         function UrlCtrl($scope) {
             $scope.urls = [];
@@ -46,18 +47,69 @@
 
             init();
         }
+
+        function SearchCtrl($scope) {
+            $scope.tables = [
+                {server: '1', db: 'core1', table: 'users'},
+                {server: '1', db: 'core2', table: 'friends'},
+                {server: '1', db: 'core1', table: 'things'},
+                {server: '1', db: 'core2', table: 'user_likes'},
+                {server: '2', db: 'logs', table: 'user_actions'}
+            ];
+
+            $scope.filtered_tables = [];
+
+            $scope.search_criteria = '';
+
+            $scope.$watch('search_criteria', function (newValue, oldValue) {
+                if (oldValue === newValue) {
+                    return;
+                }
+                runSearch(newValue);
+            });
+
+            function runSearch(criteria) {
+                criteria = criteria.trim();
+                var pattern = criteriaToRegExp(criteria);
+                $scope.filtered_tables = _.filter($scope.tables, function (entry) {
+                    // TODO: Cache this normalized version into the array instead of rebuilding every time
+                    var normalized = entry.server + '.' + entry.db + '.' + entry.table;
+                    return pattern.test(normalized);
+                });
+            }
+
+            function criteriaToRegExp(criteria) {
+                criteria = criteria.trim();
+                if (criteria === '') {
+                    return /.*/;
+                }
+                var stripped = criteria
+                    // strip non-alphanumerics
+                        .replace(/[^a-z0-9_\.]/gi, '')
+                    // insert temp spacers
+                        .replace(/./g, '$& ')
+                    // special case for periods
+                        .replace(/\./g, '\\.')
+                    // switch temp spacers
+                        .replace(/ /g, '.*');
+                return new RegExp(stripped);
+            }
+
+            runSearch($scope.search_criteria);
+        }
     </script>
 </head>
 <body>
 <h1>PMA Search</h1>
-<section>
+<section ng-controller="UrlCtrl">
     <h2>PMA Instances</h2>
 
     <p>Add PMA instances</p>
 
-    <div ng-controller="UrlCtrl">
+    <div>
         <form>
-            <input type="text" ng-model="new_pma_url" ng-model-instant>
+            <label for="new_url">PMA Location:</label>
+            <input id="new_url" type="text" ng-model="new_pma_url" ng-model-instant>
             <button ng-click="addUrl()">Add</button>
         </form>
         Total Urls: {{getTotalUrls()}}
@@ -69,6 +121,36 @@
         </ul>
         <button ng-click="clear()">Clear Urls</button>
     </div>
+</section>
+<section ng-controller="SearchCtrl">
+    <h2>Search</h2>
+
+    <p>
+        Performs a sub-string search.
+        Use dot (.) to separate server, database, or table.
+        Non-alphanmeric characters are ignored.
+    </p>
+
+    <label for="search_criteria">Search:</label>
+    <input id="search_criteria" type="text" ng-model="search_criteria" ng-model-instant>
+    <table>
+        <thead>
+        <tr>
+            <th scope="col">Server</th>
+            <th scope="col">Database</th>
+            <th scope="col">Table</th>
+            <th scope="col">Url</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="table in filtered_tables">
+            <td>{{table.server}}</td>
+            <td>{{table.db}}</td>
+            <td>{{table.table}}</td>
+            <td><a href="#{{table.server}},{{table.db}},{{table.table}}">Go!</a></td>
+        </tr>
+        </tbody>
+    </table>
 </section>
 </body>
 </html>
